@@ -1,7 +1,10 @@
 "use client";
 
-import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
-import { locales, selectLocale, translations, type Locale } from "./i18n";
+import { PointerEvent as ReactPointerEvent, useRef, useState } from "react";
+import { SiteFooter, SiteHeader } from "./components/site-chrome";
+import { ContactForm } from "./contact/contact-form";
+import { useLocale } from "./hooks/use-locale";
+import { translations } from "./i18n";
 
 const services = [
   { number: "01", slug: "mining", title: "Resource Development", copy: "Responsible sourcing partnerships built for long-term supply." },
@@ -33,50 +36,11 @@ const faqs = [
 const chain = ["Source", "Move", "Clear", "Process", "Refine", "Verify", "Deliver"];
 
 export default function Home() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
-  const [formStatus, setFormStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [locale, setLocale] = useState<Locale>("en");
-  const [languageOpen, setLanguageOpen] = useState(false);
   const [heroZoom, setHeroZoom] = useState(1);
-  const languagePickerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
-  const t = translations[locale];
+  const { copy: t } = useLocale();
   const bodyCopy = translations.en;
-  const currentLocale = locales.find(({ code }) => code === locale) ?? locales[0];
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("wohnen-locale") as Locale | null;
-    const browserLocale = navigator.language;
-    const detected = locales.find(({ code }) => browserLocale === code || browserLocale.startsWith(`${code}-`))?.code;
-    const frame = window.requestAnimationFrame(() => {
-      setLocale(saved && translations[saved] ? saved : detected ?? "en");
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    const sync = (event: Event) => setLocale((event as CustomEvent<Locale>).detail);
-    window.addEventListener("wohnen:locale", sync);
-    return () => window.removeEventListener("wohnen:locale", sync);
-  }, []);
-
-  useEffect(() => {
-    const dismiss = (event: PointerEvent) => {
-      if (!languagePickerRef.current?.contains(event.target as Node)) setLanguageOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setLanguageOpen(false);
-    };
-    document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", dismiss);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, []);
-
-  const closeMenu = () => setMenuOpen(false);
 
   function moveHero(event: ReactPointerEvent<HTMLElement>) {
     if (event.pointerType === "touch" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -104,90 +68,11 @@ export default function Home() {
     });
   }
 
-  async function submitInquiry(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormStatus("sending");
-    const form = new FormData(event.currentTarget);
-    const payload = Object.fromEntries(form.entries());
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-      const response = await fetch(`${apiUrl}/api/inquiries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error("Unable to send inquiry");
-      event.currentTarget.reset();
-      setFormStatus("sent");
-    } catch {
-      setFormStatus("error");
-    }
-  }
-
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to content</a>
 
-      <header className="site-header notranslate" translate="no">
-        <a className="brand" href="/" aria-label="Wohnen home" onClick={closeMenu}>
-          <img src="/images/logo-white.png" alt="Wohnen Co., Ltd." />
-        </a>
-        <nav className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
-          <a href="/company" onClick={closeMenu}>{t.company}</a>
-          <a href="/services" onClick={closeMenu}>{t.services}</a>
-          <a href="/compliance" onClick={closeMenu}>{t.compliance}</a>
-          <a href="/insights" onClick={closeMenu}>{t.insights}</a>
-          <a href="/contact" onClick={closeMenu}>{t.contact}</a>
-        </nav>
-        <div className="language-picker" ref={languagePickerRef}>
-          <button
-            className="language-trigger"
-            type="button"
-            aria-label={t.selectLanguage}
-            aria-haspopup="listbox"
-            aria-expanded={languageOpen}
-            onClick={() => setLanguageOpen((current) => !current)}
-          >
-            <span className="flag" aria-hidden="true">{currentLocale.flag}</span>
-            <span className="language-name">{currentLocale.label}</span>
-            <i aria-hidden="true">⌄</i>
-          </button>
-          {languageOpen && (
-            <div className="language-menu" role="listbox" aria-label={t.selectLanguage}>
-              {locales.map((item) => (
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={item.code === locale}
-                  className={item.code === locale ? "selected" : undefined}
-                  key={item.code}
-                  onClick={() => {
-                    setLocale(item.code);
-                    selectLocale(item.code);
-                    setLanguageOpen(false);
-                  }}
-                >
-                  <span className="flag" aria-hidden="true">{item.flag}</span>
-                  <span>{item.label}</span>
-                  {item.code === locale && <b aria-hidden="true">✓</b>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <a className="header-cta" href="/contact">{t.inquiry} <span aria-hidden="true">↗</span></a>
-        <button
-          className="menu-button"
-          type="button"
-          aria-label="Toggle navigation"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((current) => !current)}
-        >
-          <span />
-          <span />
-        </button>
-      </header>
+      <SiteHeader />
 
       <main id="main-content">
         <section className="hero" id="home" ref={heroRef} onPointerMove={moveHero} onPointerLeave={resetHero}>
@@ -379,37 +264,11 @@ export default function Home() {
             <a href="mailto:sales@wohnensiam.com">sales@wohnensiam.com <span>↗</span></a>
           </div>
 
-          <form className="inquiry-form" onSubmit={submitInquiry}>
-            <label><span>{bodyCopy.name}</span><input name="name" type="text" autoComplete="name" required placeholder={bodyCopy.name} /></label>
-            <label><span>{bodyCopy.workEmail}</span><input name="email" type="email" autoComplete="email" required placeholder="name@company.com" /></label>
-            <label><span>{bodyCopy.companyName}</span><input name="company" type="text" autoComplete="organization" required placeholder={bodyCopy.companyName} /></label>
-            <label><span>{bodyCopy.interest}</span>
-              <select name="interest" defaultValue="Antimony supply">
-                <option>Antimony supply</option>
-                <option>Compliance & documentation</option>
-                <option>Processing & refining</option>
-                <option>Inspection & certification</option>
-                <option>Logistics & delivery</option>
-              </select>
-            </label>
-            <label className="full-field"><span>{bodyCopy.message}</span><textarea name="message" rows={4} required placeholder={bodyCopy.message} /></label>
-            <button className="button button-primary submit-button" type="submit" disabled={formStatus === "sending"}>
-              {formStatus === "sending" ? bodyCopy.sending : bodyCopy.send} <span>→</span>
-            </button>
-            <p className={`form-status ${formStatus}`} aria-live="polite">
-              {formStatus === "sent" && "Thank you. Your inquiry has been received."}
-              {formStatus === "error" && <>The local API is not running yet. Please email <a href="mailto:sales@wohnensiam.com">sales@wohnensiam.com</a>.</>}
-            </p>
-          </form>
+          <ContactForm copy={bodyCopy} className="" messageRows={4} />
         </section>
       </main>
 
-      <footer className="site-footer">
-        <div className="footer-brand"><img src="/images/logo-white.png" alt="Wohnen Co., Ltd." /><p>{bodyCopy.footer}</p></div>
-        <div><span>Explore</span><a href="/company">Company</a><a href="/services">Services</a><a href="/compliance">Compliance</a><a href="/faq">FAQ</a></div>
-        <div><span>Connect</span><a href="mailto:sales@wohnensiam.com">Email</a><a href="/contact">Inquiry</a><a href="#home">Back to top</a></div>
-        <p className="copyright">© {new Date().getFullYear()} Wohnen Co., Ltd. All rights reserved.</p>
-      </footer>
+      <SiteFooter variant="home" tagline={bodyCopy.footer} />
     </>
   );
 }

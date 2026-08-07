@@ -54,15 +54,15 @@ export function applyPageTranslation(locale: Locale) {
 }
 
 export function selectLocale(locale: Locale) {
-  const language = locale === "en-SG" ? "en" : locale;
   window.localStorage.setItem("wohnen-locale", locale);
-  if (language === "en") {
-    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=" + window.location.hostname;
-  } else {
-    document.cookie = `googtrans=/en/${language}; path=/; SameSite=Lax`;
-  }
-  window.location.reload();
+  document.documentElement.lang = locale;
+  document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+  document.documentElement.dataset.locale = locale;
+
+  // Let the picker close and paint before Google Translate mutates the page.
+  window.requestAnimationFrame(() => {
+    window.dispatchEvent(new CustomEvent<Locale>("wohnen:locale", { detail: locale }));
+  });
 }
 
 type Copy = {

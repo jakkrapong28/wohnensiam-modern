@@ -1,49 +1,45 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { locales, selectLocale, translations, type Locale } from "../i18n";
+import { useLocale } from "../hooks/use-locale";
+import { locales, selectLocale } from "../i18n";
 
 export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [locale, setLocale] = useState<Locale>("en");
   const picker = useRef<HTMLDivElement>(null);
-  const t = translations[locale];
+  const { locale, setLocale, copy: t } = useLocale();
   const selected = locales.find((item) => item.code === locale) ?? locales[0];
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("wohnen-locale") as Locale | null;
-    const frame = window.requestAnimationFrame(() => {
-      if (saved && translations[saved]) setLocale(saved);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    const sync = (event: Event) => setLocale((event as CustomEvent<Locale>).detail);
-    window.addEventListener("wohnen:locale", sync);
-    return () => window.removeEventListener("wohnen:locale", sync);
-  }, []);
 
   useEffect(() => {
     const dismiss = (event: PointerEvent) => {
       if (!picker.current?.contains(event.target as Node)) setLanguageOpen(false);
     };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setLanguageOpen(false);
+        setMenuOpen(false);
+      }
+    };
     document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   return (
-    <header className={`site-header inner-header notranslate${overlay ? " overlay-header" : ""}`} translate="no">
+    <header className={`site-header notranslate${overlay ? " inner-header overlay-header" : ""}`} translate="no">
       <a className="brand" href="/" aria-label="Wohnen home">
         <img src="/images/logo-white.png" alt="Wohnen Co., Ltd." />
       </a>
       <nav className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
-        <a href="/company">{t.company}</a>
-        <a href="/services">{t.services}</a>
-        <a href="/compliance">{t.compliance}</a>
-        <a href="/insights">{t.insights}</a>
-        <a href="/contact">{t.contact}</a>
+        <a href="/company" onClick={() => setMenuOpen(false)}>{t.company}</a>
+        <a href="/services" onClick={() => setMenuOpen(false)}>{t.services}</a>
+        <a href="/compliance" onClick={() => setMenuOpen(false)}>{t.compliance}</a>
+        <a href="/insights" onClick={() => setMenuOpen(false)}>{t.insights}</a>
+        <a href="/contact" onClick={() => setMenuOpen(false)}>{t.contact}</a>
       </nav>
       <div className="language-picker" ref={picker}>
         <button className="language-trigger" type="button" aria-label={t.selectLanguage} aria-haspopup="listbox" aria-expanded={languageOpen} onClick={() => setLanguageOpen((value) => !value)}>
@@ -71,7 +67,18 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
   );
 }
 
-export function SiteFooter() {
+export function SiteFooter({ variant = "route", tagline = "Global antimony supply, coordinated with clarity." }: { variant?: "home" | "route"; tagline?: string }) {
+  if (variant === "home") {
+    return (
+      <footer className="site-footer">
+        <div className="footer-brand"><img src="/images/logo-white.png" alt="Wohnen Co., Ltd." /><p>{tagline}</p></div>
+        <div><span>Explore</span><a href="/company">Company</a><a href="/services">Services</a><a href="/compliance">Compliance</a><a href="/faq">FAQ</a></div>
+        <div><span>Connect</span><a href="mailto:sales@wohnensiam.com">Email</a><a href="/contact">Inquiry</a><a href="#home">Back to top</a></div>
+        <p className="copyright">© {new Date().getFullYear()} Wohnen Co., Ltd. All rights reserved.</p>
+      </footer>
+    );
+  }
+
   return (
     <footer className="site-footer route-footer">
       <div className="footer-brand"><img src="/images/logo-white.png" alt="Wohnen Co., Ltd." /><p>Global antimony supply, coordinated with clarity.</p></div>

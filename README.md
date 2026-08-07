@@ -65,8 +65,17 @@ The root `package.json` is optional convenience tooling. After installing root d
 ## Production checks
 
 - `npm run build`
+- `npm test`
 - `npm run typecheck`
 - `npm run lint`
+
+## Architecture notes
+
+- Shared site chrome keeps navigation, locale selection and footer behavior consistent across routes.
+- Locale changes update in place without a full-page reload or scroll reset.
+- The inquiry form owns its request lifecycle and is reused on both the home and contact pages.
+- Zod is the API boundary: submitted data is normalized and validated before it reaches Mongoose.
+- API contract tests use Node's built-in test runner through `tsx`, keeping the setup lightweight.
 
 ## Inquiry endpoint
 
